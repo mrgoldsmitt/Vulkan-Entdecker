@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# deploy_release.sh - Build & Release-Paketierung für Vulkan Entdecker
+# deploy_release.sh - Build, Release-Paketierung & Deployment für Vulkan Entdecker
 # ==============================================================================
 set -euo pipefail
 
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 APP_NAME="Vulkan-Entdecker"
-VERSION="${1:-v1.0.0}"
+VERSION="${1:-v1.0.1}"
 VERSION="${VERSION#v}" # remove leading v if present
 TAG="v${VERSION}"
 DIST_DIR="${SCRIPT_DIR}/dist"
@@ -35,7 +35,7 @@ STAGING_DIR="${TMP_BUILD_DIR}/${APP_NAME}"
 mkdir -p "${STAGING_DIR}"
 
 # Kopiere relevante Dateien
-cp -R index.html Start.bat Start.command css js assets README.md LICENSE "${STAGING_DIR}/"
+cp -R index.html Start.bat Start.command css js assets README.md LICENSE CHANGELOG.md "${STAGING_DIR}/"
 
 # Bereinige etwaige .DS_Store oder temporäre Dateien im Staging-Ordner
 find "${STAGING_DIR}" -name ".DS_Store" -delete
@@ -47,8 +47,18 @@ echo "-> Erstelle ZIP-Archiv: ${ZIP_PATH}"
 ZIP_SIZE="$(du -h "${ZIP_PATH}" | cut -f1)"
 echo "✓ Release-Archiv erfolgreich erstellt: ${ZIP_PATH} (${ZIP_SIZE})"
 
-# Optional: GitHub Release erstellen, falls gewünscht oder Argument übergeben
-if [[ "${2:-}" == "--release" || "${2:-}" == "--publish" || "${1:-}" == "--release" ]]; then
+# 3. Optional: Cloudflare Pages Deployment
+if [[ "$*" == *"--cloudflare"* ]]; then
+    echo "-> Deploye auf Cloudflare Pages (vulkan-entdecker)..."
+    CF_STAGING="$(mktemp -d -t vulkan-cf-XXXXXX)"
+    cp -R index.html css js assets "${CF_STAGING}/"
+    npx wrangler pages deploy "${CF_STAGING}" --project-name vulkan-entdecker --branch main --commit-dirty=true
+    rm -rf "${CF_STAGING}"
+    echo "✓ Cloudflare Pages erfolgreich aktualisiert: https://vulkan-entdecker.pages.dev"
+fi
+
+# 4. Optional: GitHub Release erstellen
+if [[ "$*" == *"--release"* || "$*" == *"--publish"* ]]; then
     echo "-> Veröffentliche Release auf GitHub via gh CLI..."
     if command -v gh >/dev/null 2>&1; then
         gh release create "${TAG}" "${ZIP_PATH}" \

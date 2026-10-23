@@ -29,6 +29,10 @@ temp/
 *.tmp
 *.temp
 *.log
+.cf_dist/
+
+# Cloudflare Wrangler
+.wrangler/
 
 # Environment variables & secrets
 .env
