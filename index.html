@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Vulkan Entdecker</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- Google Fonts: Montserrat for UI, Bebas Neue for Headlines -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;600;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Three.js Import Map (Required for module imports) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- Cinematic Vignette & Atmosphere -->
+    <div id="atmosphere-overlay"></div>
+    <div id="sunlight-overlay"></div>
+
+    <!-- Background Video Placeholder -->
+    <div id="video-background-container">
+        <!-- Video Enabled -->
+        <video autoplay muted loop playsinline id="bg-video">
+            <source src="assets/background_loop.mp4" type="video/mp4">
+        </video>
+        <!-- Gradients over video for cinematic look -->
+        <div class="video-placeholder"></div>
+    </div>
+
+    <!-- Main App Container -->
+    <main id="app-container">
+
+        <!-- Interactive Scene -->
+        <div id="scene-container">
+            <!-- 3D Layer -->
+            <canvas id="three-canvas"></canvas>
+            
+            <!-- 2D Lite Layer (Fallback) -->
+            <div id="lite-container" class="hidden">
+                <div id="lite-wrapper">
+                    <img src="assets/volcano_lite_bg.png?v=2" alt="Vulkan Illustration" id="lite-image">
+                    <div id="lite-labels-container"></div>
+                </div>
+            </div>
+
+            <div id="labels-container"></div>
+            
+            <div id="labels-container"></div>
+        </div>
+
+        <!-- UI Layout -->
+        <div id="ui-layer">
+
+            <!-- Header -->
+            <header>
+                <div class="header-top">
+                    <!-- Mode Switcher (Left) -->
+                    <div id="mode-switcher" class="glass-panel">
+                        <span class="mode-label">3D</span>
+                        <label class="switch">
+                            <input type="checkbox" id="mode-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                        <span class="mode-label">Lite</span>
+                    </div>
+                    <h1>Vulkan <span class="highlight">Entdecker</span> <small class="lite-only header-lite-hint">Lite</small></h1>
+                    <div class="header-spacer"></div> <!-- To help centering if needed -->
+                </div>
+            </header>
+
+            <!-- Character / Info Area (Floating Glass Card) -->
+            <div id="character-container" class="hidden glass-panel">
+                <div class="character-content">
+                    <div class="speech-bubble">
+                        <h3 id="topic-title">Info</h3>
+                        <p id="character-text">Willkommen! Tippe auf den Vulkan.</p>
+                    </div>
+                    <img src="assets/explorer_avatar.png" alt="Forscher Tom" id="explorer-character">
+                </div>
+                <button class="close-btn"
+                    onclick="document.getElementById('character-container').classList.add('hidden')">×</button>
+            </div>
+
+            <!-- Video Controls (Top Right) -->
+            <button id="btn-video-toggle" class="glass-panel" title="Hintergrundvideo pausieren/abspielen">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="6" y="4" width="4" height="16"></rect>
+                    <rect x="14" y="4" width="4" height="16"></rect>
+                </svg>
+            </button>
+
+            <!-- Bottom Controls (Floating Glass Dock) -->
+            <nav id="bottom-controls" class="glass-dock">
+                <button id="btn-eruption" class="action-btn fire-style">
+                    <span class="icon">🌋</span>
+                </button>
+                <div class="separator"></div>
+                <button id="btn-reset" class="action-btn water-style">
+                    <span class="icon">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                    </span>
+                </button>
+            </nav>
+
+        </div>
+
+    </main>
+
+    <!-- Debug Console (Hidden by default, shows on error) -->
+    <div id="debug-console"
+        style="position: fixed; top: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); color: lime; font-family: monospace; padding: 10px; z-index: 9999; display: none; pointer-events: none;">
+        <strong>Debug Log:</strong><br>
+    </div>
+
+    <script>
+        const debugConsole = document.getElementById('debug-console');
+        const oldLog = console.log;
+        const oldError = console.error;
+
+        function showDebug(msg, color = 'lime') {
+            debugConsole.style.display = 'block';
+            debugConsole.innerHTML += `<span style="color: ${color};">${msg}</span><br>`;
+        }
+
+        console.log = function (...args) {
+            oldLog.apply(console, args);
+        };
+
+        console.error = function (...args) {
+            oldError.apply(console, args);
+            showDebug("ERROR: " + args.join(' '), 'red');
+        };
+
+        // Catch unhandled errors
+        window.addEventListener('error', function (e) {
+            showDebug("GLOBAL ERROR: " + e.message, 'red');
+        });
+    </script>
+
+    <script type="module" src="js/script.js"></script>
+</body>
+
+</html>

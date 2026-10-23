@@ -1,0 +1,53 @@
+# macOS System Files
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows System Files
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+
+# App & OS installer / binary packages
+*.app
+*.dmg
+*.pkg
+*.exe
+*.dll
+*.iso
+
+# Build & distribution artifacts
+build/
+dist/
+target/
+out/
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+*.pfx
+*.p12
+id_rsa
+id_ecdsa
+id_ed25519
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
