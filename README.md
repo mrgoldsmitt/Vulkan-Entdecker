@@ -4,7 +4,7 @@ Eine interaktive 3D-Lernanwendung zur Erkundung des Aufbaus und der Dynamik eine
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Pages-F38020?style=for-the-badge&logo=cloudflare&logoColor=white)](https://vulkan-entdecker.pages.dev)
 [![GitHub Release](https://img.shields.io/github/v/release/mrgoldsmitt/Vulkan-Entdecker?style=for-the-badge)](https://github.com/mrgoldsmitt/Vulkan-Entdecker/releases)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC_BY--NC_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/deed.de)
 
 🌐 **Live im Browser ausprobieren:** [https://vulkan-entdecker.pages.dev](https://vulkan-entdecker.pages.dev)
 
@@ -24,9 +24,8 @@ Eine interaktive 3D-Lernanwendung zur Erkundung des Aufbaus und der Dynamik eine
 - **Physikbasierte Eruptionssimulation:**
   - Realistische Partikelsysteme für Lavafontänen, herabfließende Lavaströme und aufsteigende Aschewolken.
   - Interaktiver Eruptions-Button mit Licht- und Sound-Atmosphäre.
-- **Adaptiver Lite-Modus (2D-Fallback):**
-  - Automatisches Umschalten für rechenschwächere Mobilgeräte und Tablets.
-  - Manueller Schalter (3D / Lite) in der Kopfzeile.
+- **Thematischer 3D-Ladebalken:**
+  - Animierte Fortschrittsanzeige im Magma-Design am oberen Bildschirmrand für volumetrische 3D-Modelle.
 - **Cinematische Benutzeroberfläche:**
   - Modernes Glassmorphism-Design.
   - Atmosphärischer Videohintergrund mit Steuerungsoptionen.
@@ -96,4 +95,4 @@ Alle Änderungen sind im [CHANGELOG.md](CHANGELOG.md) dokumentiert.
 
 ## 📄 Lizenz
 
-Dieses Projekt ist unter der [MIT-Lizenz](LICENSE) lizenziert.
+Dieses Projekt ist unter der **Creative Commons Namensnennung - Nicht-kommerziell 4.0 International ([CC BY-NC 4.0](LICENSE))** Lizenz für [mrgoldsmitt](https://mrgoldsmitt.work) lizenziert.

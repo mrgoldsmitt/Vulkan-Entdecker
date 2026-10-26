@@ -20,9 +20,14 @@ class PerformanceManager {
 
     detectInitialQuality() {
         try {
-            // Check for manual override from localStorage
-            const manualMode = localStorage.getItem('vulkan_mode');
-            
+            // Clean up any legacy manual mode override
+            try {
+                localStorage.removeItem('vulkan_mode');
+            } catch (_) {}
+
+            document.body.classList.remove('is-lite');
+            this.isLiteMode = false;
+
             const canvas = document.createElement('canvas');
             const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
             if (gl) {
@@ -31,47 +36,8 @@ class PerformanceManager {
                     this.gpuInfo = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
                 }
             }
-            
-            const pixelLoad = window.screen.width * window.screen.height * Math.pow(window.devicePixelRatio, 2);
-            
-            // Refined Detection logic
-            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
 
-            if (manualMode) {
-                this.isLiteMode = manualMode === 'lite';
-            } else {
-                // Determine Lite Mode automatically
-                if (isTouchDevice) {
-                    const maxDim = Math.max(window.screen.width, window.screen.height);
-                    if (maxDim <= 1080) {
-                        this.isLiteMode = true;
-                    }
-                }
-                
-                // FORCE 3D for Desktops / M1 Macs if no touch is present and no manual override
-                if (isMac && !isTouchDevice) {
-                    this.isLiteMode = false;
-                    this.isLowPerf = false;
-                }
-            }
-            
-            // Apply mode classes
-            if (this.isLiteMode) {
-                this.isLowPerf = true;
-                document.body.classList.add('is-lite', 'low-perf');
-                const videoContainer = document.getElementById('video-background-container');
-                if (videoContainer) {
-                    videoContainer.innerHTML = ''; 
-                    videoContainer.classList.add('lite-bg');
-                }
-                // Mode logic applied
-            } else {
-                document.body.classList.remove('is-lite');
-            }
-
-            console.log(`PerformanceManager: LiteMode=${this.isLiteMode}, LowPerf=${this.isLowPerf}, GPU=${this.gpuInfo}`);
-
+            console.log(`PerformanceManager: 3D Mode active, LowPerf=${this.isLowPerf}, GPU=${this.gpuInfo}`);
         } catch (e) {
             console.error("Perf Check Failed", e);
         }
@@ -193,8 +159,6 @@ const CONFIG = {
 const canvas = document.getElementById('three-canvas');
 const container = document.getElementById('scene-container');
 const labelsContainer = document.getElementById('labels-container');
-const liteLabelsContainer = document.getElementById('lite-labels-container');
-if (perfManager.isLiteMode && labelsContainer) labelsContainer.style.display = 'none'; // Prevent 3D labels from bleeding through
 const characterContainer = document.getElementById('character-container');
 const characterText = document.getElementById('character-text');
 const topicTitle = document.getElementById('topic-title');
@@ -205,71 +169,236 @@ const bgPlaceholder = document.querySelector('.video-placeholder');
 
 if (bgVideo) bgVideo.playbackRate = 0.75;
 
-// --- Three.js Setup (Conditional) ---
-let scene, camera, renderer, controls;
+// --- Modal Dialog (Info, Changelog & Lizenz) ---
+const infoModal = document.getElementById('info-modal-backdrop');
+const btnInfoModal = document.getElementById('btn-info-modal');
+const modalCloseBtn = document.getElementById('modal-close-btn');
 
-if (!perfManager.isLiteMode) {
-    scene = new THREE.Scene();
-
-    // Camera
-    camera = new THREE.PerspectiveCamera(
-        CONFIG.camera.fov,
-        container.offsetWidth / container.offsetHeight,
-        CONFIG.camera.near,
-        CONFIG.camera.far
-    );
-    camera.position.set(CONFIG.camera.posX, CONFIG.camera.posY, CONFIG.camera.posZ);
-
-    // Renderer (Adaptive Antialiasing and PixelRatio setup)
-    renderer = new THREE.WebGLRenderer({ 
-        canvas, 
-        alpha: true, 
-        antialias: !perfManager.isLowPerf // disable AA early if low perf
-    });
-    renderer.setSize(container.offsetWidth, container.offsetHeight);
-    renderer.setPixelRatio(perfManager.isLowPerf ? 1 : Math.min(window.devicePixelRatio, 2));
-
-    // Controls
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 2; // Closer minimum for better inspection
-    controls.maxDistance = 50; // Further max for large models
-    controls.target.set(0, 0, 0);
-
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Brighter
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2); // Stronger sun
-    dirLight.position.set(5, 10, 7);
-    scene.add(dirLight);
-
-    const pointLight = new THREE.PointLight(0xffedd0, 2, 20); // Warm fill
-    pointLight.position.set(-5, 5, 5);
-    scene.add(pointLight);
-} else {
-    console.log("Three.js initialization skipped: Lite Mode active.");
-    // Hide 3D canvas
-    canvas.style.display = 'none';
+function openInfoModal() {
+    if (infoModal) {
+        infoModal.classList.remove('hidden');
+    }
 }
+
+function closeInfoModal() {
+    if (infoModal) {
+        infoModal.classList.add('hidden');
+    }
+}
+
+if (btnInfoModal) {
+    btnInfoModal.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openInfoModal();
+    });
+}
+
+if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeInfoModal();
+    });
+}
+
+if (infoModal) {
+    infoModal.addEventListener('click', (e) => {
+        if (e.target === infoModal) {
+            closeInfoModal();
+        }
+    });
+}
+
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && infoModal && !infoModal.classList.contains('hidden')) {
+        closeInfoModal();
+    }
+});
+
+// --- Three.js Setup (3D Scene) ---
+const scene = new THREE.Scene();
+
+// Camera
+const camera = new THREE.PerspectiveCamera(
+    CONFIG.camera.fov,
+    container.offsetWidth / container.offsetHeight,
+    CONFIG.camera.near,
+    CONFIG.camera.far
+);
+camera.position.set(CONFIG.camera.posX, CONFIG.camera.posY, CONFIG.camera.posZ);
+
+// Renderer (Adaptive Antialiasing and PixelRatio setup)
+const renderer = new THREE.WebGLRenderer({ 
+    canvas, 
+    alpha: true, 
+    antialias: !perfManager.isLowPerf // disable AA early if low perf
+});
+renderer.setSize(container.offsetWidth, container.offsetHeight);
+renderer.setPixelRatio(perfManager.isLowPerf ? 1 : Math.min(window.devicePixelRatio, 2));
+
+// Controls
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.minDistance = 2; // Closer minimum for better inspection
+controls.maxDistance = 50; // Further max for large models
+controls.target.set(0, 0, 0);
+
+// Lighting
+const ambientLight = new THREE.AmbientLight(0xffffff, 1.2); // Brighter
+scene.add(ambientLight);
+
+const dirLight = new THREE.DirectionalLight(0xffffff, 2); // Stronger sun
+dirLight.position.set(5, 10, 7);
+scene.add(dirLight);
+
+const pointLight = new THREE.PointLight(0xffedd0, 2, 20); // Warm fill
+pointLight.position.set(-5, 5, 5);
+scene.add(pointLight);
 
 // --- Models ---
 let particleSystem; // Declare early for animate loop
 let volcanoExterior, volcanoInterior;
-// Draco Compression Support (Conditional)
-const loader = !perfManager.isLiteMode ? new GLTFLoader() : null;
 
-if (loader) {
-    const dracoLoader = new DRACOLoader();
-    dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/');
-    loader.setDRACOLoader(dracoLoader);
+// --- 3D Model Loading Tracker ---
+class ModelLoadingTracker {
+    constructor() {
+        this.container = document.getElementById('model-loader-container');
+        this.fill = document.getElementById('model-loader-fill');
+        this.text = document.getElementById('model-loader-text');
+        this.percent = document.getElementById('model-loader-percent');
+        this.badge = document.getElementById('model-loader-badge');
 
-    // Enable KTX2 and Meshopt support
-    const ktx2Loader = new KTX2Loader().setTranscoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/');
-    loader.setKTX2Loader(ktx2Loader.detectSupport(renderer));
-    loader.setMeshoptDecoder(MeshoptDecoder);
+        this.models = {
+            exterior: { loaded: 0, total: 22014792, done: false },
+            interior: { loaded: 0, total: 20566108, done: false }
+        };
+
+        if (!perfManager.isLowPerf) {
+            this.models.ash = { loaded: 0, total: 22928412, done: false };
+        }
+
+        this.currentPercent = 0;
+        this.targetPercent = 0;
+        this.isCompleted = false;
+
+        this.startLoop();
+    }
+
+    updateProgress(key, xhr) {
+        if (!this.models[key]) {
+            this.models[key] = { loaded: 0, total: 20000000, done: false };
+        }
+        if (xhr) {
+            if (xhr.total && xhr.total > 0) {
+                this.models[key].total = xhr.total;
+            }
+            if (xhr.loaded) {
+                this.models[key].loaded = xhr.loaded;
+            }
+        }
+        this.calc();
+    }
+
+    setDone(key) {
+        if (this.models[key]) {
+            this.models[key].loaded = this.models[key].total;
+            this.models[key].done = true;
+        }
+        this.calc();
+        if (Object.values(this.models).every(m => m.done)) {
+            this.targetPercent = 100;
+            if (this.currentPercent >= 99.5) {
+                this.complete();
+            }
+        }
+    }
+
+    setError(key, err) {
+        console.error(`Fehler beim Laden des 3D-Modells (${key}):`, err);
+        if (this.models[key]) {
+            this.models[key].done = true;
+        }
+        this.calc();
+        if (Object.values(this.models).every(m => m.done)) {
+            this.targetPercent = 100;
+            if (this.currentPercent >= 99.5) {
+                this.complete();
+            }
+        }
+    }
+
+    calc() {
+        let loadedSum = 0;
+        let totalSum = 0;
+        for (const k in this.models) {
+            loadedSum += this.models[k].loaded;
+            totalSum += this.models[k].total;
+        }
+        const pct = totalSum > 0 ? (loadedSum / totalSum) * 100 : 0;
+        this.targetPercent = Math.max(this.targetPercent, Math.min(100, pct));
+    }
+
+    startLoop() {
+        const step = () => {
+            if (this.isCompleted) return;
+
+            if (this.currentPercent < this.targetPercent) {
+                const diff = this.targetPercent - this.currentPercent;
+                this.currentPercent += Math.max(0.4, diff * 0.12);
+                if (this.currentPercent > 100) this.currentPercent = 100;
+
+                const displayPct = Math.min(100, Math.round(this.currentPercent));
+                if (this.fill) this.fill.style.width = `${displayPct}%`;
+                if (this.percent) this.percent.textContent = `${displayPct}%`;
+
+                if (displayPct >= 100 && Object.values(this.models).every(m => m.done)) {
+                    this.complete();
+                    return;
+                }
+            }
+
+            requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+    }
+
+    complete() {
+        if (this.isCompleted) return;
+        this.isCompleted = true;
+
+        if (this.fill) {
+            this.fill.style.width = '100%';
+            this.fill.classList.add('completed');
+        }
+        if (this.percent) this.percent.textContent = '100%';
+        if (this.text) this.text.textContent = '3D-Modelle bereit!';
+        if (this.badge) this.badge.classList.add('completed');
+
+        // Nach 3 Sekunden (3000 ms) sanft ausblenden
+        setTimeout(() => {
+            if (this.container) {
+                this.container.classList.add('fade-out');
+                setTimeout(() => {
+                    this.container.style.display = 'none';
+                }, 600);
+            }
+        }, 3000);
+    }
 }
+
+const modelTracker = new ModelLoadingTracker();
+
+// Draco Compression Support (Conditional)
+const loader = new GLTFLoader();
+
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/');
+loader.setDRACOLoader(dracoLoader);
+
+// Enable KTX2 and Meshopt support
+const ktx2Loader = new KTX2Loader().setTranscoderPath('https://unpkg.com/three@0.160.0/examples/jsm/libs/basis/');
+loader.setKTX2Loader(ktx2Loader.detectSupport(renderer));
+loader.setMeshoptDecoder(MeshoptDecoder);
 
 function fitModelToScene(model) {
     const box = new THREE.Box3().setFromObject(model);
@@ -293,37 +422,40 @@ function fitModelToScene(model) {
     console.log(`Model Loaded: Scaled by ${scale} to fit scene.`);
 }
 
-// Load Models (Only in 3D Mode)
-if (!perfManager.isLiteMode) {
-    // Load Exterior
-    loader.load('assets/models/volcano_exterior.glb', (gltf) => {
-        volcanoExterior = gltf.scene;
-        fitModelToScene(volcanoExterior);
-        volcanoExterior.position.y = -0.7;
-        volcanoExterior.scale.multiplyScalar(1.05); // 5% Larger as requested
-        volcanoExterior.traverse((child) => {
-            if (child.isMesh) {
-                child.material.transparent = true;
-                child.material.opacity = 1;
-                child.material.side = THREE.DoubleSide;
-            }
-        });
-        scene.add(volcanoExterior);
-    }, undefined, (error) => console.error('Error loading exterior:', error));
+// Load Models
+// Load Exterior
+loader.load('assets/models/volcano_exterior.glb', (gltf) => {
+    volcanoExterior = gltf.scene;
+    fitModelToScene(volcanoExterior);
+    volcanoExterior.position.y = -0.7;
+    volcanoExterior.scale.multiplyScalar(1.05); // 5% Larger as requested
+    volcanoExterior.traverse((child) => {
+        if (child.isMesh) {
+            child.material.transparent = true;
+            child.material.opacity = 1;
+            child.material.side = THREE.DoubleSide;
+        }
+    });
+    scene.add(volcanoExterior);
+    modelTracker.setDone('exterior');
+}, (xhr) => {
+    modelTracker.updateProgress('exterior', xhr);
+}, (error) => {
+    modelTracker.setError('exterior', error);
+});
 
-    // Load Interior
-    loader.load('assets/models/volcano_interior.glb', (gltf) => {
-        volcanoInterior = gltf.scene;
-        fitModelToScene(volcanoInterior);
-        volcanoInterior.position.y = -2.0;
-        scene.add(volcanoInterior);
-    }, undefined, (error) => console.error('Error loading interior:', error));
-} else {
-    // Enable Lite layer interaction
-    const liteContainer = document.getElementById('lite-container');
-    if (liteContainer) liteContainer.classList.add('is-active');
-}
-
+// Load Interior
+loader.load('assets/models/volcano_interior.glb', (gltf) => {
+    volcanoInterior = gltf.scene;
+    fitModelToScene(volcanoInterior);
+    volcanoInterior.position.y = -2.0;
+    scene.add(volcanoInterior);
+    modelTracker.setDone('interior');
+}, (xhr) => {
+    modelTracker.updateProgress('interior', xhr);
+}, (error) => {
+    modelTracker.setError('interior', error);
+});
 
 // --- Labels System ---
 const labelElements = [];
@@ -349,23 +481,6 @@ function createLabels() {
             }
         });
 
-// Add to Lite Container as well if in Lite Mode
-        if (perfManager.isLiteMode && liteLabelsContainer) {
-            const liteDiv = div.cloneNode(true);
-            liteDiv.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (CONFIG.explanations[data.id]) {
-                    showCharacter(CONFIG.explanations[data.id].title, CONFIG.explanations[data.id].text);
-                }
-            });
-            liteLabelsContainer.appendChild(liteDiv);
-            labelItemsLite.push({
-                element: liteDiv,
-                pos2D: data.pos2D,
-                id: data.id
-            });
-        }
-
         // Add to 3D Container
         labelsContainer.appendChild(div);
 
@@ -377,19 +492,10 @@ function createLabels() {
         });
     });
 }
-const labelItemsLite = [];
+
 createLabels();
 
 function updateLabels() {
-    if (perfManager.isLiteMode) {
-        // Fix labels in Lite Mode wrapper
-        labelItemsLite.forEach((labelItem) => {
-            labelItem.element.style.left = `${labelItem.pos2D.x}%`;
-            labelItem.element.style.top = `${labelItem.pos2D.y}%`;
-        });
-        return;
-    }
-
     if (!camera) return;
     
     labelElements.forEach((labelItem) => {
@@ -427,44 +533,39 @@ function showCharacter(title, text) {
 function animate() {
     requestAnimationFrame(animate);
 
-    if (!perfManager.isLiteMode) {
-        controls.update();
+    controls.update();
 
-        // Zoom Transition Logic
-        if (volcanoExterior) {
-            // Optimization: less frequent traverse logic on low perf devices
-            const shouldTraverse = !perfManager.isLowPerf || perfManager.frameCounter % 4 === 0;
-            
-            if (shouldTraverse) {
-                const dist = camera.position.distanceTo(controls.target);
-
-                // Calculate Opacity based on distance
-                let opacity = (dist - CONFIG.transition.fadeEnd) / (CONFIG.transition.fadeStart - CONFIG.transition.fadeEnd);
-                opacity = Math.max(0, Math.min(1, opacity));
-
-                volcanoExterior.traverse((child) => {
-                    if (child.isMesh) {
-                        child.material.opacity = opacity;
-                        child.material.depthWrite = opacity > 0.5;
-                        child.visible = opacity > 0;
-                    }
-                });
-            }
-        }
-
-        updateLabels();
-
-        // Animate Particles
-        if (particleSystem) particleSystem.update();
-
-        renderer.render(scene, camera);
+    // Zoom Transition Logic
+    if (volcanoExterior) {
+        // Optimization: less frequent traverse logic on low perf devices
+        const shouldTraverse = !perfManager.isLowPerf || perfManager.frameCounter % 4 === 0;
         
-        // Track FPS
-        perfManager.update();
-    } else {
-        // In Lite Mode, just update labels (only needed on resize really, but keeps logic consistent)
-        updateLabels();
+        if (shouldTraverse) {
+            const dist = camera.position.distanceTo(controls.target);
+
+            // Calculate Opacity based on distance
+            let opacity = (dist - CONFIG.transition.fadeEnd) / (CONFIG.transition.fadeStart - CONFIG.transition.fadeEnd);
+            opacity = Math.max(0, Math.min(1, opacity));
+
+            volcanoExterior.traverse((child) => {
+                if (child.isMesh) {
+                    child.material.opacity = opacity;
+                    child.material.depthWrite = opacity > 0.5;
+                    child.visible = opacity > 0;
+                }
+            });
+        }
     }
+
+    updateLabels();
+
+    // Animate Particles
+    if (particleSystem) particleSystem.update();
+
+    renderer.render(scene, camera);
+    
+    // Track FPS
+    perfManager.update();
 }
 
 perfManager.startMonitoring();
@@ -472,11 +573,9 @@ animate();
 
 // --- Resize Handling ---
 window.addEventListener('resize', () => {
-    if (!perfManager.isLiteMode) {
-        camera.aspect = container.offsetWidth / container.offsetHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(container.offsetWidth, container.offsetHeight);
-    }
+    camera.aspect = container.offsetWidth / container.offsetHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(container.offsetWidth, container.offsetHeight);
     updateLabels();
 });
 
@@ -486,8 +585,6 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
 container.addEventListener('click', (event) => {
-    if (perfManager.isLiteMode) return; 
-
     const rect = container.getBoundingClientRect();
     mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
     mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -501,7 +598,7 @@ container.addEventListener('click', (event) => {
 let volcanoAsh;
 let isErupting = false;
 
-if (!perfManager.isLowPerf && !perfManager.isLiteMode) {
+if (!perfManager.isLowPerf) {
     loader.load('assets/models/volcano_ash.glb', (gltf) => {
         volcanoAsh = gltf.scene;
         fitModelToScene(volcanoAsh);
@@ -516,8 +613,18 @@ if (!perfManager.isLowPerf && !perfManager.isLiteMode) {
         });
 
         scene.add(volcanoAsh);
-    }, undefined, (error) => {
+        if (typeof modelTracker !== 'undefined' && modelTracker) {
+            modelTracker.setDone('ash');
+        }
+    }, (xhr) => {
+        if (typeof modelTracker !== 'undefined' && modelTracker) {
+            modelTracker.updateProgress('ash', xhr);
+        }
+    }, (error) => {
         console.error('Error loading ash cloud:', error);
+        if (typeof modelTracker !== 'undefined' && modelTracker) {
+            modelTracker.setError('ash', error);
+        }
     });
 }
 
@@ -528,18 +635,6 @@ function triggerEruption() {
     // Show Eruption Labels
     setLabelVisibility('ash', true);
     setLabelVisibility('lava_flow', true);
-
-    if (perfManager.isLiteMode) {
-        // Correct labels for Lite Mode eruption
-        const ashLabel = labelItemsLite.find(l => l.id === 'ash');
-        if (ashLabel) ashLabel.element.style.display = 'block';
-        
-        const flowLabel = labelItemsLite.find(l => l.id === 'lava_flow');
-        if (flowLabel) flowLabel.element.style.display = 'block';
-        
-        showCharacter("Vulkanausbruch!", "Der Vulkan bricht aus! Lavaströme fließen die Hänge hinab.");
-        return;
-    }
 
     // Start Particles
     if (particleSystem) particleSystem.startEruption();
@@ -616,7 +711,7 @@ if (perfManager.isLowPerf && videoObj) {
     videoObj.style.display = 'none';
 }
 
-if (videoBtn && videoObj && !perfManager.isLiteMode) {
+if (videoBtn && videoObj) {
     videoBtn.addEventListener('click', () => {
         if (videoObj.paused) {
             videoObj.play();
@@ -625,25 +720,6 @@ if (videoBtn && videoObj && !perfManager.isLiteMode) {
             videoObj.pause();
             videoBtn.innerHTML = playSVG;
         }
-    });
-} else if (videoBtn && perfManager.isLiteMode) {
-    videoBtn.style.display = 'none'; // Hide video controls in Lite mode
-}
-
-// --- Mode Toggle Logic ---
-const modeToggle = document.getElementById('mode-toggle');
-if (modeToggle) {
-    // Sync UI with state
-    modeToggle.checked = perfManager.isLiteMode;
-    
-    modeToggle.addEventListener('change', (e) => {
-        const newMode = e.target.checked ? 'lite' : '3d';
-        localStorage.setItem('vulkan_mode', newMode);
-        
-        // Brief delay before reload for visual feedback
-        setTimeout(() => {
-            window.location.reload();
-        }, 300);
     });
 }
 
@@ -864,6 +940,4 @@ class ParticleSystem {
     }
 }
 
-if (!perfManager.isLiteMode) {
-    particleSystem = new ParticleSystem(scene);
-}
+particleSystem = new ParticleSystem(scene);

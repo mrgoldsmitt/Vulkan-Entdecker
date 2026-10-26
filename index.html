@@ -26,6 +26,18 @@
 
 <body>
 
+    <!-- Thematic Loading Bar for 3D Models (Top Edge) -->
+    <div id="model-loader-container">
+        <div id="model-loader-track">
+            <div id="model-loader-fill"></div>
+        </div>
+        <div id="model-loader-badge">
+            <span class="loader-flame">🌋</span>
+            <span id="model-loader-text">3D-Modelle werden geladen...</span>
+            <span id="model-loader-percent">0%</span>
+        </div>
+    </div>
+
     <!-- Cinematic Vignette & Atmosphere -->
     <div id="atmosphere-overlay"></div>
     <div id="sunlight-overlay"></div>
@@ -47,17 +59,6 @@
         <div id="scene-container">
             <!-- 3D Layer -->
             <canvas id="three-canvas"></canvas>
-            
-            <!-- 2D Lite Layer (Fallback) -->
-            <div id="lite-container" class="hidden">
-                <div id="lite-wrapper">
-                    <img src="assets/volcano_lite_bg.png?v=2" alt="Vulkan Illustration" id="lite-image">
-                    <div id="lite-labels-container"></div>
-                </div>
-            </div>
-
-            <div id="labels-container"></div>
-            
             <div id="labels-container"></div>
         </div>
 
@@ -67,17 +68,7 @@
             <!-- Header -->
             <header>
                 <div class="header-top">
-                    <!-- Mode Switcher (Left) -->
-                    <div id="mode-switcher" class="glass-panel">
-                        <span class="mode-label">3D</span>
-                        <label class="switch">
-                            <input type="checkbox" id="mode-toggle">
-                            <span class="slider round"></span>
-                        </label>
-                        <span class="mode-label">Lite</span>
-                    </div>
-                    <h1>Vulkan <span class="highlight">Entdecker</span> <small class="lite-only header-lite-hint">Lite</small></h1>
-                    <div class="header-spacer"></div> <!-- To help centering if needed -->
+                    <h1>Vulkan <span class="highlight">Entdecker</span></h1>
                 </div>
             </header>
 
@@ -118,9 +109,101 @@
                 </button>
             </nav>
 
+            <!-- Subtle Info, Changelog & Copyright Button (Bottom Left) -->
+            <div id="bottom-left-dock">
+                <button id="btn-info-modal" class="glass-btn-subtle" title="Info, Changelog und Lizenz anzeigen" aria-label="Info, Changelog und Lizenz anzeigen">
+                    <span class="info-icon">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="16" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                        </svg>
+                    </span>
+                    <span class="info-version">v1.1.0</span>
+                    <span class="info-sep">&bull;</span>
+                    <span class="info-author">&copy; mrgoldsmitt</span>
+                </button>
+            </div>
+
         </div>
 
     </main>
+
+    <!-- Info, Changelog & Copyright Modal Dialog -->
+    <div id="info-modal-backdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="modal-badge">🌋 Vulkan Entdecker</span>
+                    <h2 id="modal-title">Changelog & Lizenz</h2>
+                </div>
+                <button id="modal-close-btn" class="modal-close-btn" title="Schließen" aria-label="Schließen">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Copyright & CC Lizenz -->
+                <div class="modal-section copyright-section">
+                    <div class="section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <path d="M14.83 14.83a4 4 0 1 1 0-5.66"></path>
+                        </svg>
+                        <h3>Copyright & Lizenz</h3>
+                    </div>
+                    <div class="copyright-card">
+                        <div class="copyright-main">
+                            &copy; 2026 <a href="https://mrgoldsmitt.work" target="_blank" rel="noopener noreferrer" class="external-link author-link"><strong>mrgoldsmitt</strong> (mrgoldsmitt.work)</a>
+                        </div>
+                        <div class="license-info">
+                            <div class="license-tag-row">
+                                <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.de" target="_blank" rel="noopener noreferrer" class="cc-badge-link">
+                                    <span class="cc-badge">CC BY-NC 4.0</span>
+                                </a>
+                                <span class="license-name">Creative Commons Namensnennung - Nicht-kommerziell 4.0 International</span>
+                            </div>
+                            <p class="license-desc">
+                                Dieses Projekt ist unter der <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.de" target="_blank" rel="noopener noreferrer" class="external-link">Creative Commons CC BY-NC 4.0 Lizenz</a> für <a href="https://mrgoldsmitt.work" target="_blank" rel="noopener noreferrer" class="external-link">mrgoldsmitt</a> freigegeben. Sie dürfen das Material in jedwedem Format teilen und bearbeiten, solange Sie angemessene Urheberangaben machen und das Material nicht für kommerzielle Zwecke nutzen.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Changelog -->
+                <div class="modal-section changelog-section">
+                    <div class="section-title">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <h3>Changelog</h3>
+                    </div>
+
+                    <div class="changelog-entry">
+                        <div class="changelog-header-row">
+                            <span class="version-tag">v1.1.0</span>
+                            <span class="version-badge-latest">Aktuelle Version</span>
+                        </div>
+                        <ul class="changelog-list">
+                            <li><strong>Thematischer 3D-Ladebalken:</strong> Neuer animierter Ladefortschrittsbalken im Magma-Design am oberen Bildschirmrand für das volumetrische Nachladen der 3D-GLB-Modelle mit flüssiger Prozentanzeige und 3-Sekunden-Fade-Out nach Abschluss.</li>
+                            <li><strong>Subtiler Info- &amp; Lizenzabruf:</strong> Eleganter Glassmorphism-Button in der unteren linken Ecke zur schnellen Anzeige von Changelog, Version und Copyright.</li>
+                            <li><strong>Reines 3D-Erlebnis:</strong> Entfernung des 3D/Lite-Toggles zugunsten einer durchgängigen 3D-WebGL-Visualisierung und eines harmonisch zentrierten Headers.</li>
+                            <li><strong>Interaktives 3D-Vulkanmodell:</strong> WebGL/Three.js-Szenenaufbau mit stufenlosem Schichten-Querschnitt bei Annäherung der Kamera (Magmakammer, Förderschlot, Krater, Lavaschichten).</li>
+                            <li><strong>Physikbasierte Eruptionssimulation:</strong> Partikelsystem für glühende Lavafontänen, gravitativ abfließende Lavaströme und aufsteigende Aschewolken.</li>
+                            <li><strong>Didaktische Lernstationen:</strong> Interaktive Hotspots mit Forscher Tom zur Erklärung geologischer Phänomene.</li>
+                            <li><strong>Creative Commons CC BY-NC 4.0:</strong> Offizielle Hinterlegung der CC-Lizenzierung für mrgoldsmitt mit Verlinkung auf <a href="https://mrgoldsmitt.work" target="_blank" rel="noopener noreferrer" class="external-link">mrgoldsmitt.work</a>.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Debug Console (Hidden by default, shows on error) -->
     <div id="debug-console"

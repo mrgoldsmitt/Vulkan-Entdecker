@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 APP_NAME="Vulkan-Entdecker"
-VERSION="${1:-v1.0.1}"
+VERSION="${1:-v1.1.0}"
 VERSION="${VERSION#v}" # remove leading v if present
 TAG="v${VERSION}"
 DIST_DIR="${SCRIPT_DIR}/dist"
